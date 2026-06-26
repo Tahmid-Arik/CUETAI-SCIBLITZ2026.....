@@ -21,7 +21,7 @@ st.title("My Streamlit App-SciBlitz 2026")
 st.subheader("I am Tahmid Arik. Welcome to my AI application!")
 
 
-DATA_FILE_PATH = os.path.join("data", "cuet_info.txt")
+DATA_FILE_PATH = os.path.join(BASE_DIR, "data", "cuet_info.txt")
 
 def load_context():
     if os.path.exists(DATA_FILE_PATH):
