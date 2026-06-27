@@ -31,22 +31,70 @@ def load_context():
         st.error("Data file missing! Please create 'data/disease_info.txt'")
         return ""
 
-user_input = st.text_input("write your info here")
+col1, col2 = st.columns(2)
 
+with col1:
+    user_age = st.number_input("Write your age:", min_value=1, max_value=100, value=25)
+    existing_disease = st.selectbox("Did you have any disease in previous?", ["None", "Diabetes", "Hypertension", "Kidney Disease"])
+
+with col2:
+    symptom_days = st.slider("How many days you are suffering? (Days)", 1, 14, 3)
+
+user_input = st.text_input("DO you want to know about specefic disease or health information")
 if st.button("give the answer"):
     if user_input:
         with st.spinner("Processing with AI..."):
             context_data = load_context()
-            
+
             if context_data:
-                prompt = f"""
-                You are a smart Health and Medical assistant for Humans.If a user gives the symptoms of a disease, you will provide the most likely disease name and its treatment according to the context below. If the user asks about a specific disease, you will provide detailed information about that disease, including its symptoms, causes, and treatment options according to the context below. If the user asks for general health advice, you will provide tips for maintaining good health and preventing illness according to the context below.You can use your own intelligence to provide the user information within the context below but do not go outside the contewxt.
+                prompt2 = f"""
+                You are a smart Health assistant 
+                Answer the user's question based strictly on the provided Context below.
                 Context:
                 {context_data}
 
                 User Question: {user_input}
-                Answer:
-                """
+                Answer:"""
+                try:
+                    model = genai.GenerativeModel("gemini-2.5-flash" \
+                    "")
+                    response2 = model.generate_content(prompt2)
+                    st.success("Answer from AI:")
+                    st.write(response2.text)
+                except Exception as e:
+                    st.error(f"Error connecting to AI: {e}")
+    else:
+        st.warning("Please enter a query.")
+
+#user will write his problems in brief
+user_symptoms = st.text_area("Write about your current physical or Mental problem in brief:")
+
+if st.button("Analyze the symptoms"):
+    if user_symptoms:
+        with st.spinner("Processing with AI..."):
+            context_data = load_context()
+            
+            if context_data:
+                prompt = f"""You are an advanced AI Clinical Assistant under the Health & Medical Track.Your task is to analyze the user's specific health data against our Verified Medical Knowledge Base.You can use your intelligence to provide informations to the users but do not use information not related to our Verified Medical Knowledge Base.
+
+                Verified Medical Knowledge Base:
+                {context_data}
+
+                User Profile:
+                - Age: {user_age}
+                - Chronic Conditions: {existing_disease}
+                - Symptom Duration: {symptom_days} days
+                - Current Symptoms described by user: "{user_symptoms}"
+
+                Based STRICTLY on the knowledge base, provide a personalized advisory response including:
+                1. Potential Condition (with a clear risk level: Low/Medium/High).
+                2. Immediate Primary Advice / First-Aid.
+                3. Referral (Which specialist doctor or hospital department they should visit).
+
+                *Crucial Rule*: Add a clear medical disclaimer at the end."""
+
+                
+
                 try:
                     model = genai.GenerativeModel("gemini-2.5-flash" \
                     "")
