@@ -3,25 +3,19 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-
+# Load environment variables explicitly
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOTENV_PATH = os.path.join(BASE_DIR, ".env")
 load_dotenv(DOTENV_PATH)
 
-
+# Fetch single active API key
 api_key = os.getenv("GEMINI_API_KEY")
 
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    st.error("API Key not found! Please set GEMINI_API_KEY in your .env file.")
-
-
 st.title("Health and Medical Care App-SciBlitz 2026")
-st.subheader("Welcome to my AI application!Do you have Any questions about your Health or you want to know about a disease? Ask me anything and I will try to provide you with the best possible answer based on the information available in my context file.")
-
+st.subheader("Welcome to our Health& Medical service AI application.Do you have Any questions about your Health or you want to know about a disease? Ask me anything and I will try to provide you with the best possible answer based on the information available in my context file.")
 
 DATA_FILE_PATH = os.path.join(BASE_DIR, "data", "disease_info.txt")
+
 @st.cache_data
 def load_context():
     if os.path.exists(DATA_FILE_PATH):
@@ -40,68 +34,47 @@ with col1:
 with col2:
     symptom_days = st.slider("How many days you are suffering? (Days)", 1, 14, 3)
 
-#user will write his problems in brief
+# User symptoms input
 user_symptoms = st.text_area("Write about your current physical or Mental problem in brief:")
 
-if st.button("Analyze the symptoms"):
+if st.button("Answer"):
     if user_symptoms:
-        with st.spinner("Processing with AI..."):
-            context_data = load_context()
-            
-            if context_data:
-                prompt = f"""You are a Clinical AI Assistant under the Health & Medical Track for Bangladesh.
+        if not api_key:
+            st.error("API Key not found! Please set GEMINI_API_KEY in your .env file.")
+        else:
+            with st.spinner("Processing with AI...(wait for a while)"):
+                context_data = load_context()
+                
+                if context_data:
+                    prompt = f"""You are a Clinical AI Assistant under the Health & Medical Track for Bangladesh.Answer the question of the user by using your own intelligence but within our {context_data} is mandatory for you.
                 Context Database:
                 {context_data}
-
-                User profile:
+                if user ask you any health or medical information for gaining knowledge,describe him/her in brief with coherent paragraphs
+                User profile:[use this profile only if the user ask you to evaluate his/her diseases]
                 1.Age: {user_age}years
                 2.Pre-existing: {existing_disease}
                 3.Duration: {symptom_days} days
                 4.Symptoms: "{user_symptoms}"
-                
-                You must follow the part 1 from {context_data} to know "Instruction to Gemini API:A,B,C" and by analyzing user profile above,--give response according to:
-                A)Evaluation on patient
-                B)Advices bases on Evaluation[If matched with Context]
-                C)General advice [If NOT matched with Context]
-                if the identifying characteristics doesn't match directly or indirectly ,strictly follow C
-                Disclaimer: This on a limited knowledge base and must not replace professional medical diagnosis."
+
+                Evaluation Rules:[Only necessary if the user ask you to identify his/her physical problems]
+                1. Elevate Risk Level according to {user_age} and {symptom_days}
+                2.the user might have multiple disease at once and you must strictly evaluate that.
+                3. Co-relate symptoms with Pre-existing condition {existing_disease} based on {context_data}
+
+                if the user's question is not relatable with  {context_data},then inform him about that with an apology and give some general health advice .
                 Crucial: Always end with a medical disclaimer."""
 
-                try:
-                    model = genai.GenerativeModel("gemini-2.5-flash" \
-                    "")
-                    response = model.generate_content(prompt,stream=True)
-                    st.success("Answer from AI:")
-                    st.write_stream(chunk.text for chunk in response)
-                except Exception as e:
-                    st.error(f"Error connecting to AI: {e}")
+
+                    try:
+                        # Direct and strict initialization right before calling generating content
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+                        
+                        response = model.generate_content(prompt, stream=True)
+                        st.success("Answer from AI:")
+                        st.write_stream(chunk.text for chunk in response)
+                    except Exception as e:
+                        st.error(f"Error connecting to AI: {e}")
     else:
         st.warning("Please enter a query.")
 
-user_input = st.text_input("DO you want to know about specefic disease or health information")
-if st.button("give the answer"):
-    if user_input:
-        with st.spinner("Processing with AI..."):
-            context_data = load_context()
-
-            if context_data:
-                prompt2 = f"""
-                You are a smart Health assistant 
-                Answer the user's question based strictly on the provided Context below.
-                Context:
-                {context_data}
-
-                User Question: {user_input}
-                Answer:[strictly based on {context_data} only using your intelligence,no outside information is allowed ]
-                careful about the synonymps used by the user
-                """
-                try:
-                    model = genai.GenerativeModel("gemini-2.5-flash-lite" \
-                    "")
-                    response2 = model.generate_content(prompt2,stream=2)
-                    st.success("Answer from AI:")
-                    st.write_stream(chunk.text for chunk in response2)
-                except Exception as e2:
-                    st.error(f"Error connecting to AI: {e2}")
-    else:
-        st.warning("Please enter a query.")
