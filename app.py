@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+import time
 
 # Load environment variables explicitly
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -89,16 +90,34 @@ if st.button("Answer"):
                 Crucial: Always end with a medical disclaimer."""
 
 
-                    try:
-                        # Direct and strict initialization right before calling generating content
-                        genai.configure(api_key=api_key)
-                        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+                try:   
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+                    max_retries = 3
+                    response = None
+                    for attempt in range(max_retries):
+                        try:
+                            response = model.generate_content(prompt, stream=True)
+                            if response:
+                                st.success("Answer from AI:")
+                                def generate_chunks(stream_resp):
+                                    for chunk in stream_resp:
+                                        yield chunk.text
+
                         
-                        response = model.generate_content(prompt, stream=True)
-                        st.success("Answer from AI:")
-                        st.write_stream(chunk.text for chunk in response)
-                    except Exception as e:
-                        st.error(f"Error connecting to AI: {e}")
+                                st.write_stream(generate_chunks(response))
+                                break
+
+                        except Exception as ai_error:
+                            if attempt< max_retries - 1:
+                                st.warning(f"Error connecting to AI: {ai_error}. Retrying... ({attempt + 1}/{max_retries})")
+                                time.sleep(2)  # Wait before retrying
+                                continue
+                            else:
+                                raise ai_error
+                except Exception as e:
+                    st.error(f"Error connecting to AI: {e}")
+     
     else:
         st.warning("Please enter a query.")
 
